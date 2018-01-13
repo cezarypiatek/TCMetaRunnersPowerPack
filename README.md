@@ -1,5 +1,7 @@
 # TCMetaRunnersPowerPack
-A set of Team City meta runners. Meta runners can be imported in "Meta runners" tab in project settings. To get know Team City meta runners please read the [meta runners documentation](https://confluence.jetbrains.com/display/TCD10/Working+with+Meta-Runner)
+A set of Team City meta runners. Meta runners can be imported by uploading meta runner definition file in "Meta runners" tab in project settings. To get know Team City meta runners please read the [meta runners documentation](https://confluence.jetbrains.com/display/TCD10/Working+with+Meta-Runner)
+
+![Meta runner uploads](https://github.com/cezarypiatek/TCMetaRunnersPowerPack/blob/master/doc/MetaRunnersImport.jpg?raw=true)
 
 
 # Microsoft Teams Notification
