@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<meta-runner name="Microsoft Teams Notification">
+  <description>Send notification to MS Teams</description>
+  <settings>
+    <parameters>
+      <param name="MSTeams_WebhookUrl" value="" spec="text display='normal' label='MS Teams Webhook url' validationMode='not_empty'" />
+      <param name="MSTeams_Title" value="" spec="text display='normal' label='Title' validationMode='not_empty'" />
+      <param name="MSTeams_Message" value="" spec="text display='normal' label='Message' validationMode='not_empty'" />
+    </parameters>
+    <build-runners>
+      <runner name="Send Teams Notification" type="jetbrains_powershell">
+        <parameters>
+          <param name="jetbrains_powershell_errorToError" value="true" />
+          <param name="jetbrains_powershell_execution" value="PS1" />
+          <param name="jetbrains_powershell_noprofile" value="true" />
+          <param name="jetbrains_powershell_script_code"><![CDATA[$body = @{
+title= "%MSTeams_Title%";
+text= "%MSTeams_Message%"
+} | ConvertTo-Json
+Invoke-WebRequest -Method Post -Uri "%MSTeams_WebhookUrl%" -Body $body -ContentType "application/json" -usebasicparsing]]></param>
+          <param name="jetbrains_powershell_script_mode" value="CODE" />
+          <param name="teamcity.step.mode" value="default" />
+        </parameters>
+      </runner>
+    </build-runners>
+    <requirements />
+  </settings>
+</meta-runner>
+
