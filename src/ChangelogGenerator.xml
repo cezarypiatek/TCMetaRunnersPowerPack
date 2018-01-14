@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<meta-runner name="Changelog generator">
+  <description>Generate file with changelog based on build changes</description>
+  <settings>
+    <parameters>      
+      <param name="ChangelogFormat" value="HTML" spec="select display='normal' label='Format' data_2='TEXT' data_1='HTML'" />
+      <param name="OutputDir" value="" spec="text display='normal' description='Changelog output directory' label='Output dir' validationMode='any'" />
+	  <param name="IssueUrlPrefix" value="" spec="text display='normal' description='Url prefix from issue tracker' label='Issue url prefix' validationMode='any'" />
+	  <param name="IssueIdPattern" value="" spec="text description='Regex patter to recognize issue id (for jira use &quot;|[a-z|]+-|[0-9|]+&quot;)' label='Issue id pattern' validationMode='any' display='normal'" />      
+    </parameters>
+    <build-runners>
+      <runner name="Generate changelog" type="jetbrains_powershell">
+        <parameters>
+          <param name="jetbrains_powershell_errorToError" value="true" />
+          <param name="jetbrains_powershell_execution" value="PS1" />
+          <param name="jetbrains_powershell_noprofile" value="true" />
+          <param name="jetbrains_powershell_script_code"><![CDATA[function Invoke-TCApi
+{
+    param($ApiPath)
+    $teamcityUrl = "%teamcity.serverUrl%"
+    $authToken=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("%system.teamcity.auth.userId%:%system.teamcity.auth.password%"))
+    $request = [System.Net.WebRequest]::Create("$($teamcityUrl)$($ApiPath)")     
+    $request.Headers.Add("AUTHORIZATION", "Basic $authToken");
+    [xml](new-object System.IO.StreamReader $request.GetResponse().GetResponseStream()).ReadToEnd() 
+}
+
+function ConvertFrom-TCDate
+{
+    param($StringDate)
+    [datetime]::ParseExact($StringDate,"yyyyMMdd'T'HHmmsszzz", [System.Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Get-ChangeDetails
+{
+    param($ChangeId)
+    $xml = Invoke-TCApi -ApiPath "/httpAuth/app/rest/changes/id:$ChangeId"
+    @{
+        User = if($xml.change.user.name -eq $null){$xml.change.username}else {$xml.change.user.name};
+        Date = ConvertFrom-TCDate -StringDate $xml.change.date;
+        Comment = $xml.change.comment -replace "`n"," ";
+        Url = $xml.change.webUrl
+    }
+}
+
+function Convert-ChangeToText{
+    param([parameter(ValueFromPipeline)]$Changes)
+    process{
+        foreach($change in $Changes)
+        {
+            "+ $("{0:u}" -f $change.Date) : $($change.User) : $($change.Comment)"
+        }
+    }
+}
+
+function Convert-ChangeToHtml{
+    param([parameter(ValueFromPipeline)]$Changes)
+    begin{
+        "<ul>"
+    }
+    process{
+        foreach($change in $Changes)
+        {
+            $issueUrlPrefix = "%IssueUrlPrefix%"
+            if([string]::IsNullOrWhiteSpace($issueUrlPrefix))
+            {
+                "<li><a href=`"$($change.Url)`" target=`"_blank`"> $( "{0:u}" -f $change.Date) : $($change.User) : $($change.Comment)</a></li>"
+            }else{
+                $issueIdPattern = "%IssueIdPattern%"
+                $commentWithIssueUrl = $change.Comment -replace "\b($issueIdPattern)\b","<a href=`"$issueUrlPrefix`$1`" target=`"_blank`">`$1</a>"
+                "<li><a href=`"$($change.Url)`"> $( "{0:u}" -f $change.Date) : $($change.User)</a> : $commentWithIssueUrl</li>"
+            }
+        }
+    }
+    end{
+        "</ul>"
+    }
+}
+$xml = Invoke-TCApi -ApiPath "/httpAuth/app/rest/changes?build=id:%teamcity.build.id%"
+$changes = $xml.changes.change | ForEach-Object { Get-ChangeDetails -ChangeId  $_.id}
+
+switch ("%ChangelogFormat%") {
+    "HTML" {  
+        $outputFile = Join-Path -Path "%OutputDir%" -ChildPath "changelog.html"
+        $changes | Convert-ChangeToHtml | Out-File -FilePath $outputFile -Encoding utf8
+        Write-Host "Changelog saved to $outputFile"
+    }    
+    Default {
+        $outputFile = Join-Path -Path "%OutputDir%" -ChildPath "changelog.txt"
+        $changes | Convert-ChangeToText | Out-File -FilePath $outputFile -Encoding utf8
+        Write-Host "Changelog saved to $outputFile"
+    }
+}]]></param>
+          <param name="jetbrains_powershell_script_mode" value="CODE" />
+          <param name="teamcity.step.mode" value="default" />
+        </parameters>
+      </runner>
+    </build-runners>
+    <requirements />
+  </settings>
+</meta-runner>
+
