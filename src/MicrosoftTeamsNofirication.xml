@@ -13,7 +13,9 @@
           <param name="jetbrains_powershell_errorToError" value="true" />
           <param name="jetbrains_powershell_execution" value="PS1" />
           <param name="jetbrains_powershell_noprofile" value="true" />
-          <param name="jetbrains_powershell_script_code"><![CDATA[$body = @{
+          <param name="jetbrains_powershell_script_code"><![CDATA[
+$BuildInfo = Invoke-RestMethod -Method Get -Uri '%teamcity.serverUrl%/guestAuth/app/rest/builds/id:%teamcity.build.id%' -Headers @{'Accept' = 'application/json'}
+$body = @{
 title= "%MSTeams_Title%";
 text= "%MSTeams_Message%"
 } | ConvertTo-Json
